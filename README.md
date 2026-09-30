@@ -1,5 +1,11 @@
 # SkyLens Weather
 
+A weather forecasting web application with global location search, live weather data, forecasts, charts, radar, and weather-reactive themes.
+
+## 🌐 Live Demo
+
+[**Open SkyLens Weather →**](https://skylens-weather.onrender.com)
+
 SkyLens Weather is a responsive, global weather dashboard inspired by the supplied reference design. It uses Open-Meteo for geocoding, forecast and air-quality data and changes the dashboard palette according to the current weather condition.
 
 ## What is included
