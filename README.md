@@ -1,7 +1,5 @@
 # SkyLens Weather
 
-A weather forecasting web application with global location search, live weather data, forecasts, charts, radar, and weather-reactive themes.
-
 ## 🌐 Live Demo
 
 [**Open SkyLens Weather →**](https://skylens-weather.onrender.com)
