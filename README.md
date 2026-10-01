@@ -1,149 +1,142 @@
-# SkyLens Weather
+# 🌤️ SkyLens Weather
+
+SkyLens Weather is a modern, responsive weather forecasting web application that provides live weather information, forecasts, weather analytics, location search, saved cities, and weather-reactive visual themes.
+
+The application uses Open-Meteo for weather and geocoding data and provides a lightweight Flask backend for running the application as a Python web app.
+
+---
 
 ## 🌐 Live Demo
 
-[**Open SkyLens Weather →**](https://skylens-weather.onrender.com)
+👉 **[Open SkyLens Weather](https://skylens-weather.onrender.com)**
 
-SkyLens Weather is a responsive, global weather dashboard inspired by the supplied reference design. It uses Open-Meteo for geocoding, forecast and air-quality data and changes the dashboard palette according to the current weather condition.
+---
 
-## What is included
+## ✨ Features
 
-- Global city/town/country search
-- Coordinate search (`latitude, longitude`)
-- Current conditions
-- 7-day forecast
-- 24-hour weather trend
-- Temperature, humidity, wind, pressure, precipitation, cloud cover and visibility metrics
-- Sunrise, sunset and daylight information
-- Saved locations using browser local storage
-- Celsius/Fahrenheit switch
-- CSV export
-- Weather-reactive dashboard backgrounds
-- Radar-style visual screen
-- Alert screen based on displayed forecast thresholds
-- Optional Python/Flask backend for serving the app and proxying Open-Meteo requests
+### 🌍 Global Location Search
+- Search for cities, towns, countries, and locations worldwide.
+- Search using geographical coordinates.
+- Uses Open-Meteo Geocoding API for location search.
+- Displays the selected location with coordinates and elevation.
 
-## Weather-reactive background
+### 📍 Automatic Location Detection
+- Use the **Auto** location option to request the browser's location.
+- Fetches weather based on the user's current coordinates.
+- Does not require an account.
 
-The dashboard automatically selects a visual theme from the current WMO weather code:
+### 🌦️ Live Weather Information
+Displays important weather information including:
 
-- Sunny / clear
-- Partly cloudy
-- Cloudy / overcast
-- Fog
-- Rain / showers
-- Snow
-- Thunderstorm
+- Current temperature
+- Feels-like temperature
+- Humidity
+- Wind speed and direction
+- Wind gusts
+- UV index
+- Visibility
+- Atmospheric pressure
+- Precipitation
+- Cloud cover
+- Sunrise and sunset
+- Daylight duration
+- Air quality
 
-The change is deliberately subtle so the dashboard remains readable. The page background, hero card and accent palette shift without sacrificing contrast.
+### 📅 7-Day Forecast
+- View upcoming weather conditions.
+- High and low temperatures.
+- Precipitation information.
+- Weather conditions for each forecast day.
 
-## Run the app with Python
+### 📊 Weather Charts
+- Visualize weather trends.
+- View temperature and other forecast-related information over time.
 
-### 1. Install Python
+### 🛰️ Weather Radar
+- Access the Weather Radar section for weather visualization and precipitation-related information.
 
-Python 3.10+ is recommended.
+### ⚠️ Weather Alerts
+- Dedicated alert section for important weather conditions.
+- Visual indicators for conditions requiring attention.
 
-### 2. Open a terminal in this folder
+### ⭐ Favorite Cities
+- Save frequently visited cities as favorites.
+- Favorite cities remain saved after closing and reopening the application.
+- No account or sign-in is required.
 
-```bash
-cd weather-app
-```
+### 💾 Local User Preferences
+SkyLens stores basic user preferences locally in the browser.
 
-### 3. Create a virtual environment (recommended)
+These can include:
 
-Windows PowerShell:
+- ⭐ Favorite cities
+- 📍 Last selected location
+- 🌡️ Temperature unit preference
+- 🖥️ Other local interface preferences
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+The data is stored using the browser's `localStorage`.
 
-Windows Command Prompt:
+> Local preferences are browser/device-specific. They are not synchronized between different browsers or devices.
 
-```cmd
-python -m venv .venv
-.venv\\Scripts\\activate
-```
+### 🎨 Weather-Reactive Interface
+The dashboard changes its visual theme according to the current weather condition.
 
-macOS/Linux:
+Different weather conditions can produce different visual styles, including:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
+- ☀️ Sunny
+- 🌤️ Partly cloudy
+- ☁️ Cloudy / overcast
+- 🌫️ Fog
+- 🌧️ Rain
+- ❄️ Snow
+- ⛈️ Thunderstorm
 
-### 4. Install dependencies
+### 🌡️ Temperature Units
+- Celsius (°C)
+- Fahrenheit (°F)
 
-```bash
-pip install -r requirements.txt
-```
+### 📥 CSV Export
+- Export available weather information as a CSV file for further analysis.
 
-### 5. Start SkyLens
+### 📱 Responsive Design
+- Designed to work across desktop, tablet, and mobile screen sizes.
+- Responsive dashboard layout and navigation.
 
-```bash
-python app.py
-```
+---
 
-Then open:
+## 🛠️ Technology Stack
 
-`http://127.0.0.1:5000`
+### Frontend
+- HTML5
+- CSS3
+- JavaScript
+- Material Symbols
+- Responsive UI design
 
-## How the Python code works
+### Backend
+- Python
+- Flask
 
-`app.py` is a small Flask server. It:
+### APIs
+- Open-Meteo Weather API
+- Open-Meteo Geocoding API
+- Open-Meteo Air Quality API
 
-1. Serves `index.html`, `styles.css` and `app.js`.
-2. Provides `/api/geocode` for global place search.
-3. Provides `/api/weather` for forecast data.
-4. Provides `/api/air-quality` for air-quality data.
-5. Provides `/api/health` as a simple health check.
-6. Proxies requests to Open-Meteo using Python's standard-library HTTP client.
+### Deployment
+- GitHub
+- Render
 
-The UI itself is still implemented with HTML, CSS and JavaScript because those technologies run directly in the browser. Python is used as the optional web backend.
+---
 
-## Run without Python
-
-For a quick static demo, `index.html` can also be opened directly in a browser. In that mode the frontend can communicate directly with the public Open-Meteo endpoints. For the complete Python-backed version, use `python app.py`.
-
-## Project structure
+## 📁 Project Structure
 
 ```text
 weather-app/
-├── index.html          # Page structure and navigation
-├── styles.css          # Dashboard styling and weather themes
-├── app.js              # UI logic, search, forecasts and interactions
-├── app.py              # Flask server and Open-Meteo proxy
-├── requirements.txt    # Python dependency list
-└── README.md           # Project documentation
-```
-
-## Data source
-
-Weather and geocoding data are provided by Open-Meteo. The application does not require an API key for the basic public endpoints used by this demo.
-
-## Important note about Radar
-
-The current Radar screen is a radar-style visualization for the dashboard experience. It is **not** a live weather-radar tile feed. A production version could connect it to a real radar/precipitation tile provider if live radar imagery is required.
-
-## Customization
-
-The main weather-theme logic is in `app.js` inside `applyWeatherTheme()`. The corresponding colors are in `styles.css` under:
-
-```css
-body.weather-sunny
-body.weather-partly-cloudy
-body.weather-cloudy
-body.weather-fog
-body.weather-rain
-body.weather-snow
-body.weather-storm
-```
-
-This makes it easy to change the visual mood for any weather condition.
-
-
-## Location & weather themes
-- **Auto** requests the browser's location permission and loads weather for the detected coordinates.
-- A reverse-geocoding request is used to display the nearest city/region name when available.
-- The dashboard theme changes visibly between sunny, partly cloudy, cloudy, fog, rain, snow, and storm conditions.
-- If location permission is denied, use the global search bar instead.
+│
+├── index.html
+├── styles.css
+├── app.js
+├── app.py
+├── requirements.txt
+├── README.md
+└── .gitignore
