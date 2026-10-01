@@ -4,14 +4,74 @@ const GEO_API = USE_PYTHON_BACKEND ? '/api/geocode' : 'https://geocoding-api.ope
 const WEATHER_API = USE_PYTHON_BACKEND ? '/api/weather' : 'https://api.open-meteo.com/v1/forecast';
 const AQ_API = USE_PYTHON_BACKEND ? '/api/air-quality' : 'https://air-quality-api.open-meteo.com/v1/air-quality';
 
-let unit = 'C';
+const STORAGE_KEY = 'skylens-preferences';
+
+const DEFAULT_LOCATION = {
+  name: 'Tokyo',
+  country: 'Japan',
+  country_code: 'JP',
+  latitude: 35.6764,
+  longitude: 139.6500,
+  elevation: 40,
+  admin1: 'Tokyo'
+};
+
+function loadPreferences() {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem('skylens-preferences') || '{}'
+    );
+
+    return {
+      unit: saved.unit === 'F' ? 'F' : 'C',
+      favorites: Array.isArray(saved.favorites)
+        ? saved.favorites
+        : [],
+      currentLocation: saved.currentLocation || DEFAULT_LOCATION,
+      lastScreen: saved.lastScreen || 'dashboard'
+    };
+
+  } catch (error) {
+    console.warn('Could not load saved preferences:', error);
+
+    return {
+      unit: 'C',
+      favorites: [],
+      currentLocation: DEFAULT_LOCATION,
+      lastScreen: 'dashboard'
+    };
+  }
+}
+
+const preferences = loadPreferences();
+
+let unit = preferences.unit;
 let favorite = false;
 let activeMetric = 'temp';
-let currentLocation = { name: 'Tokyo', country: 'Japan', latitude: 35.6764, longitude: 139.6500, elevation: 40, admin1: 'Tokyo' };
+let currentLocation = preferences.currentLocation;
 let weather = null;
 let air = null;
-let savedLocations = JSON.parse(localStorage.getItem('skylens-saved') || '[]');
+let savedLocations = preferences.favorites;
 let searchTimer;
+
+function savePreferences() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        unit,
+        favorites: savedLocations,
+        currentLocation,
+        lastScreen:
+          document.querySelector('.nav-item.active')?.dataset.screen ||
+          'dashboard'
+      })
+    );
+  } catch (error) {
+    console.warn('Could not save preferences:', error);
+    toast('Could not save settings on this browser.');
+  }
+}
 
 const app = document.getElementById('app');
 const search = document.getElementById('city-search');
@@ -130,30 +190,305 @@ function renderAlerts(){
   document.getElementById('ack-all').onclick=()=>toast('Visible alerts acknowledged');
 }
 
-function renderSaved(){
-  const all=[currentLocation,...savedLocations.filter(x=>x.latitude!==currentLocation.latitude || x.longitude!==currentLocation.longitude)];
-  app.innerHTML=`<div class="page stack"><div class="section-head"><div><div class="section-title">${icon('bookmark')}<h2>Saved Places</h2></div><p class="muted tiny">Save locations you check often. Search the globe from the top bar.</p></div></div><div class="forecast-grid">${all.map((v,i)=>`<button class="panel forecast-card ${i===0?'today':''}" data-saved-index="${i}" style="border:0;color:var(--text);cursor:pointer"><div class="forecast-top"><span class="forecast-day">${esc(v.name)}</span><span class="forecast-date">${i===0?'Active':'Saved'}</span></div><div><div class="forecast-icon">${icon('location_on')}</div><div class="forecast-desc">${esc(v.country || '')}</div></div><div class="muted tiny">${Number(v.latitude).toFixed(2)}°, ${Number(v.longitude).toFixed(2)}°</div></button>`).join('')}</div></div>`;
-  document.querySelectorAll('[data-saved-index]').forEach(b=>b.onclick=async()=>{ const loc=all[Number(b.dataset.savedIndex)]; await selectLocation(loc); showScreen('dashboard'); });
+function renderSaved() {
+  if (savedLocations.length === 0) {
+    app.innerHTML = `
+      <div class="page stack">
+        <div class="section-head">
+          <div>
+            <div class="section-title">
+              ${icon('bookmark')}
+              <h2>Saved Places</h2>
+            </div>
+
+            <p class="muted tiny">
+              Save locations you check often. Your saved places are stored
+              locally in this browser.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel empty-state">
+          <span class="material-symbols-outlined">star_border</span>
+          <h2>No favorite locations yet</h2>
+          <p class="muted">
+            Search for a city and click Favorite to save it.
+          </p>
+        </div>
+      </div>
+    `;
+
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="page stack">
+
+      <div class="section-head">
+        <div>
+          <div class="section-title">
+            ${icon('bookmark')}
+            <h2>Saved Places</h2>
+          </div>
+
+          <p class="muted tiny">
+            Your favorite locations are saved locally in this browser.
+          </p>
+        </div>
+      </div>
+
+      <div class="forecast-grid">
+
+        ${savedLocations.map((location, index) => `
+          <button
+            class="panel forecast-card ${sameLocation(location, currentLocation) ? 'today' : ''}"
+            data-saved-index="${index}"
+            style="border:0;color:var(--text);cursor:pointer"
+          >
+
+            <div class="forecast-top">
+              <span class="forecast-day">
+                ${esc(location.name)}
+              </span>
+
+              <span class="forecast-date">
+                ${sameLocation(location, currentLocation)
+                  ? 'Active'
+                  : 'Favorite'}
+              </span>
+            </div>
+
+            <div>
+              <div class="forecast-icon">
+                ${icon('location_on')}
+              </div>
+
+              <div class="forecast-desc">
+                ${esc(location.country || '')}
+              </div>
+            </div>
+
+            <div class="muted tiny">
+              ${Number(location.latitude).toFixed(2)}°,
+              ${Number(location.longitude).toFixed(2)}°
+            </div>
+
+          </button>
+        `).join('')}
+
+      </div>
+    </div>
+  `;
+
+  document
+    .querySelectorAll('[data-saved-index]')
+    .forEach(button => {
+
+      button.onclick = async () => {
+
+        const location =
+          savedLocations[Number(button.dataset.savedIndex)];
+
+        await selectLocation(location);
+
+        showScreen('dashboard');
+      };
+
+    });
 }
 
 function renderSettings(){
-  app.innerHTML=`<div class="page stack"><div class="section-head"><div><div class="section-title">${icon('settings')}<h2>Configuration</h2></div><p class="muted tiny">Customize units and saved-place behavior.</p></div></div><div class="panel" style="padding:20px"><div class="form-grid"><div class="field"><label>Temperature unit</label><select id="default-unit"><option value="C" ${unit==='C'?'selected':''}>Celsius</option><option value="F" ${unit==='F'?'selected':''}>Fahrenheit</option></select></div><div class="field"><label>Selected location</label><input value="${esc(currentLocation.name)}, ${esc(currentLocation.country || '')}" disabled /></div></div><button class="btn primary" id="save-settings" style="margin-top:18px">${icon('save')} Save configuration</button></div></div>`;
-  document.getElementById('save-settings').onclick=()=>{unit=document.getElementById('default-unit').value;syncUnits();toast('Configuration saved');};
+  app.innerHTML = `
+  <div class="page stack">
+
+    <div class="section-head">
+      <div>
+        <div class="section-title">
+          ${icon('settings')}
+          <h2>Configuration</h2>
+        </div>
+
+        <p class="muted tiny">
+          Customize units and saved-place behavior.
+        </p>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:20px">
+
+      <div class="form-grid">
+
+        <div class="field">
+          <label>Temperature unit</label>
+
+          <select id="default-unit">
+            <option value="C" ${unit === 'C' ? 'selected' : ''}>
+              Celsius
+            </option>
+
+            <option value="F" ${unit === 'F' ? 'selected' : ''}>
+              Fahrenheit
+            </option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Selected location</label>
+
+          <input
+            value="${esc(currentLocation.name)}, ${esc(currentLocation.country || '')}"
+            disabled
+          />
+        </div>
+
+      </div>
+
+      <button
+        class="btn primary"
+        id="save-settings"
+        style="margin-top:18px"
+      >
+        ${icon('save')} Save configuration
+      </button>
+
+      <button
+        class="btn"
+        id="clear-local-data"
+        style="margin-top:10px"
+      >
+        ${icon('delete')} Clear local data
+      </button>
+
+    </div>
+
+  </div>
+`;
+  document.getElementById('save-settings').onclick = () => {
+  unit = document.getElementById('default-unit').value;
+
+  savePreferences();
+
+  syncUnits();
+
+  toast('Configuration saved');
+};
+
+  document.getElementById('clear-local-data').onclick = () => {
+
+  const confirmed = confirm(
+    'Clear your locally saved SkyLens favorites and settings?'
+  );
+
+  if (!confirmed) return;
+
+  localStorage.removeItem(STORAGE_KEY);
+
+  savedLocations = [];
+  unit = 'C';
+  favorite = false;
+  currentLocation = { ...DEFAULT_LOCATION };
+
+  savePreferences();
+
+  toast('Local data cleared');
+
+  selectLocation(DEFAULT_LOCATION);
+};
 }
 
-function bindDashboard(){
-  document.getElementById('favorite-btn').onclick=()=>{favorite=!favorite; if(favorite && !savedLocations.some(x=>sameLocation(x,currentLocation))) savedLocations.push({...currentLocation}); localStorage.setItem('skylens-saved',JSON.stringify(savedLocations)); renderDashboard(); toast(favorite?`${currentLocation.name} saved`:`${currentLocation.name} removed from favorite`)};
-  document.getElementById('export-btn').onclick=exportCSV;
-  document.querySelectorAll('[data-screen-link]').forEach(b=>b.onclick=()=>showScreen(b.dataset.screenLink));
+function bindDashboard() {
+  const favoriteBtn = document.getElementById('favorite-btn');
+
+  if (favoriteBtn) {
+    favoriteBtn.onclick = () => {
+      favorite = !favorite;
+
+      if (favorite) {
+        // Add location if it isn't already saved
+        if (!savedLocations.some(x => sameLocation(x, currentLocation))) {
+          savedLocations.push({ ...currentLocation });
+        }
+
+        toast(`${currentLocation.name} added to favorites`);
+      } else {
+        // Remove the current location from saved locations
+        savedLocations = savedLocations.filter(
+          x => !sameLocation(x, currentLocation)
+        );
+
+        toast(`${currentLocation.name} removed from favorites`);
+      }
+
+      // Save everything to browser storage
+      savePreferences();
+
+      // Refresh dashboard
+      renderDashboard();
+    };
+  }
+
+  const exportBtn = document.getElementById('export-btn');
+
+  if (exportBtn) {
+    exportBtn.onclick = exportCSV;
+  }
+
+  document.querySelectorAll('[data-screen-link]').forEach(button => {
+    button.onclick = () => showScreen(button.dataset.screenLink);
+  });
 }
 function bindChartTabs(){ document.querySelectorAll('.chart-tab').forEach(t=>t.onclick=()=>{activeMetric=t.dataset.metric; const screen=document.querySelector('.nav-item.active')?.dataset.screen || 'dashboard'; screen==='charts'?renderCharts():renderDashboard();}); }
 function exportCSV(){ if(!weather) return; const c=weather.current,d=weather.daily; const rows=[['Metric','Value'],['Location',`${currentLocation.name}, ${currentLocation.country||''}`],['Temperature',fmtTemp(c.temperature_2m)],['Feels like',fmtTemp(c.apparent_temperature)],['Humidity',`${Math.round(c.relative_humidity_2m)}%`],['Wind',wind(c.wind_speed_10m)],['Pressure',`${Math.round(c.pressure_msl)} hPa`],['Rain probability',`${d.precipitation_probability_max[0]}%`]]; const blob=new Blob([rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`skylens-${currentLocation.name.replace(/[^a-z0-9]+/gi,'-').toLowerCase()}.csv`; a.click(); URL.revokeObjectURL(a.href); toast('CSV exported'); }
-function showScreen(screen){ document.querySelectorAll('.nav-item[data-screen]').forEach(b=>b.classList.toggle('active',b.dataset.screen===screen)); ({dashboard:renderDashboard,radar:renderRadar,charts:renderCharts,alerts:renderAlerts,saved:renderSaved,settings:renderSettings}[screen]||renderDashboard)(); }
-function syncUnits(){ document.querySelectorAll('.unit').forEach(b=>b.classList.toggle('active',b.dataset.unit===unit)); document.getElementById('top-city').textContent=shortLocation(); renderDashboard(); }
+function showScreen(screen) {
+  document
+    .querySelectorAll('.nav-item[data-screen]')
+    .forEach(button => {
+      button.classList.toggle(
+        'active',
+        button.dataset.screen === screen
+      );
+    });
+
+  savePreferences();
+
+  const screens = {
+    dashboard: renderDashboard,
+    radar: renderRadar,
+    charts: renderCharts,
+    alerts: renderAlerts,
+    saved: renderSaved,
+    settings: renderSettings
+  };
+
+  (screens[screen] || renderDashboard)();
+}
+function syncUnits() {
+  document.querySelectorAll('.unit').forEach(button => {
+    button.classList.toggle(
+      'active',
+      button.dataset.unit === unit
+    );
+  });
+
+  const topCity = document.getElementById('top-city');
+  if (topCity) {
+    topCity.textContent = shortLocation();
+  }
+
+  // Save the selected °C / °F preference
+  savePreferences();
+
+  renderDashboard();
+}
 
 document.getElementById('main-nav').addEventListener('click',e=>{const b=e.target.closest('[data-screen]');if(b)showScreen(b.dataset.screen)});
 document.querySelector('.settings-nav').onclick=()=>showScreen('settings');
-document.querySelectorAll('.unit').forEach(b=>b.onclick=()=>{unit=b.dataset.unit;syncUnits()});
+document.querySelectorAll('.unit').forEach(button => {
+  button.onclick = () => {
+    unit = button.dataset.unit;
+    syncUnits();
+  };
+});
 document.getElementById('auto-location').onclick=useBrowserLocation;
 
 async function useBrowserLocation(){
@@ -217,7 +552,8 @@ async function searchLocations(q){
 }
 
 async function selectLocation(loc){
-  currentLocation={...loc};
+  currentLocation = { ...loc };
+  savePreferences();
   app.innerHTML=loadingView();
   try{
     const params=new URLSearchParams({latitude:loc.latitude,longitude:loc.longitude,current:'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility',hourly:'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,relative_humidity_2m',daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset,uv_index_max',timezone:'auto',forecast_days:'7'});
@@ -227,7 +563,9 @@ async function selectLocation(loc){
     weather=await wr.json(); air=ar.ok?await ar.json():null;
     applyWeatherTheme(weather.current.weather_code);
     document.getElementById('top-city').textContent=shortLocation();
-    favorite=savedLocations.some(x=>sameLocation(x,currentLocation));
+    favorite = savedLocations.some(
+      location => sameLocation(location, currentLocation)
+    );
     renderDashboard();
   }catch(e){ app.innerHTML=`<div class="page"><div class="panel error-state"><span class="material-symbols-outlined">cloud_off</span><h2>Weather data unavailable</h2><p>We couldn't load weather data for ${esc(loc.name)} right now. Check your connection and try again.</p><button class="btn primary" id="retry-weather">Try again</button></div></div>`; document.getElementById('retry-weather').onclick=()=>selectLocation(loc); }
 }
